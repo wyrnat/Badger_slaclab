@@ -28,7 +28,7 @@ from ..windows.var_dialog import BadgerVariableDialog
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
-from ....factory import list_generators, list_env, get_env
+from ....factory import list_generators, list_env, get_env, list_tag, get_tag
 from ....routine import Routine
 from ....settings import read_value
 from ....utils import get_yaml_string, load_config, strtobool
@@ -48,6 +48,7 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
+        self.machine_tags = list_tag()
         self.env = None
         self.routine = None
         self.script = ''
@@ -113,7 +114,7 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(descr)
 
         # Tags
-        self.cbox_tags = cbox_tags = BadgerFilterBox(title=' Tags')
+        self.cbox_tags = cbox_tags = BadgerFilterBox(parent=None, title=" Tags", tags = self.machine_tags)
         if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
             cbox_tags.hide()
         vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
@@ -148,6 +149,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_add_curr.clicked.connect(self.fill_curr_in_init_table)
         self.env_box.btn_clear.clicked.connect(self.clear_init_table)
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
+        self.cbox_tags.cb_mach.currentIndexChanged.connect(self.select_machine_tag)
 
     def refresh_ui(self, routine: Routine = None):
         self.routine = routine  # save routine for future reference
@@ -231,6 +233,25 @@ class BadgerRoutinePage(QWidget):
         self.edit_save.setPlaceholderText(generate_slug(2))
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
+        
+        tags = routine.tags
+        try:
+            self.cbox_tags.cb_mach.setCurrentIndex(tags['machine'])
+            self.select_machine_tag(self.machine_tags.index(tags['machine']))
+        except:
+            self.cbox_tags.cb_mach.setCurrentIndex(0)
+        try:
+            self.cbox_tags.cb_obj.setCurrentText(tags['objective'])
+        except:
+            self.cbox_tags.cb_obj.setCurrentIndex(0)
+        try:
+            self.cbox_tags.cb_reg.setCurrentText(tags['region'])
+        except:
+            self.cbox_tags.cb_reg.setCurrentIndex(0)
+        try:
+            self.cbox_tags.cb_gain.setCurrentText(tags['gain'])
+        except:
+            self.cbox_tags.cb_gain.setCurrentIndex(0)
 
         self.generator_box.check_use_script.setChecked(not not self.script)
 
@@ -417,6 +438,13 @@ class BadgerRoutinePage(QWidget):
         for col in range(table.columnCount()):
             item = QTableWidgetItem('')
             table.setItem(row_position, col, item)
+            
+    def select_machine_tag(self, i):
+        if i <= 0:
+            machine_tag = ""
+        else:
+            machine_tag = self.machine_tags[i-1] # empty string from Combobox not in machine_tags
+        self.cbox_tags.select_machine(machine_tag)   
 
     def open_playground(self):
         pass
